@@ -1,4 +1,4 @@
-# 免费翻墙 | 3月3日18M/S|免费Clash/Shadowrocket/V2ray/SSR免费节点订阅分享  更新时间 2025-03-03 22:26:53
+# 免费翻墙 | 3月3日20M/S|免费SSR/Shadowrocket/Clash/V2ray免费节点地址  更新时间 2025-03-03 22:29:33
 所有免费clash节点都爬取自网络，请勿用于非法用途 。节点地址：<a href="https://mianfeifanqiang.github.io" target="_blank">点击跳转</a>
 
 ## clash使用教程：
