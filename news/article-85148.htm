@@ -1,0 +1,332 @@
+<!doctype html>
+<html xml:lang="zh-CN" lang="zh-CN">
+
+<head>
+        <link rel="canonical" href="https://mianfeifanqiang.github.io/news/article-85148.htm" />
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>关于信号量Semaphore的acquire与release的说明</title>
+        <meta name="description" content="Semaphore 是 synchronized 的加强版，作用是控制线程的并发数量。 关于信号量Semaphore的acquire与release的说明 1、Semaphore信号量作为一种流控手段" />
+        <link rel="icon" href="/assets/website/img/clashxv2ray/favicon.ico" type="image/x-icon"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="author" content="免费翻墙 节点机场订阅官网">
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://mianfeifanqiang.github.io/news/article-85148.htm" />
+    <meta property="og:site_name" content="免费翻墙 节点机场订阅官网" />
+    <meta property="og:title" content="关于信号量Semaphore的acquire与release的说明" />
+    <meta property="og:image" content="https://mianfeifanqiang.github.io/uploads/20250131/8b787864489d11658ea67a95ee92b995.webp" />
+        <meta property="og:release_date" content="2025-03-31T08:39:40" />
+    <meta property="og:updated_time" content="2025-03-31T08:39:40" />
+        <meta property="og:description" content="Semaphore 是 synchronized 的加强版，作用是控制线程的并发数量。 关于信号量Semaphore的acquire与release的说明 1、Semaphore信号量作为一种流控手段" />
+    
+    <!-- Place favicon.ico in the root directory -->
+    <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+
+    <meta name="applicable-device" content="pc,mobile" />
+    <meta name="renderer" content="webkit" />
+    <meta name="force-rendering" content="webkit" />
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    <meta name="robots" content="max-image-preview:large" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="关于信号量Semaphore的acquire与release的说明">
+    <meta name="format-detection" content="telephone=no">
+
+    <link rel="dns-prefetch" href="https:/www.googletagmanager.com">
+    <link rel="dns-prefetch" href="https://www.googleadservices.com">
+    <link rel="dns-prefetch" href="https://www.google-analytics.com">
+    <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com">
+    <link rel="dns-prefetch" href="https://cm.g.doubleclick.net">
+
+    <link href="/assets/website/css/clashxv2ray/css2-Sofia_swap.css" rel="stylesheet">
+    <!-- CSS here -->
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/animate.min.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/swiper.min.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/magnific-popup.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/fontawesome-pro.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/spacing.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/custom-font.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/main.css">
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KE0R1T7Z11"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KE0R1T7Z11');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3332997411212854"
+     crossorigin="anonymous"></script>
+</head>
+
+<body data-page="detail">
+
+    <!-- preloader start -->
+    <div id="preloader">
+        <div class="preloader-close">x</div>
+        <div class="sk-three-bounce">
+            <div class="sk-child sk-bounce1"></div>
+            <div class="sk-child sk-bounce2"></div>
+            <div class="sk-child sk-bounce3"></div>
+        </div>
+    </div>
+    <!-- preloader start -->
+    <!-- Backtotop start -->
+    <div class="backtotop-wrap cursor-pointer">
+        <svg class="backtotop-circle svg-content" width="100%" height="100%" viewbox="-1 -1 102 102">
+            <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"></path>
+        </svg>
+    </div>
+    <!-- Backtotop end -->
+    <!-- Offcanvas area start -->
+    <div class="fix">
+        <div class="offcanvas__area">
+            <div class="offcanvas__wrapper">
+                <div class="offcanvas__content">
+                    <div class="offcanvas__top d-flex justify-content-between align-items-center">
+                        <div class="offcanvas__logo">
+                            <a href="/" class="xcblog-blog-logo">
+                                <span>免费翻墙</span>
+                            </a>
+                        </div>
+                        <div class="offcanvas__close">
+                            <button class="offcanvas-close-icon animation--flip">
+                                <span class="offcanvas-m-lines">
+                                    <span class="offcanvas-m-line line--1"></span><span class="offcanvas-m-line line--2"></span><span class="offcanvas-m-line line--3"></span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mobile-menu fix"></div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="offcanvas__overlay"></div>
+    <div class="offcanvas__overlay-white"></div>
+    <!-- Offcanvas area start -->
+    <!-- Header area start -->
+    <header>
+        <div id="header-sticky" class="header__area header-1">
+            <div class="container">
+                <div class="mega__menu-wrapper p-relative">
+                    <div class="header__main">
+                        <div class="header__left">
+                            <div class="header__logo">
+                                <div class="logo">
+                                    <a href="/" class="xcblog-blog-logo">
+                                                                                <span>免费翻墙</span>
+                                                                            </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="header__middle">
+                            <div class="mean__menu-wrapper d-none d-lg-block">
+                                <div class="main-menu">
+                                    <nav id="mobile-menu">
+                                        <ul>
+                                                                                        <li>
+                                                <a href="/">首页</a>
+                                            </li>
+                                                                                        <li>
+                                                <a href="/free-nodes/">免费节点</a>
+                                            </li>
+                                                                                        <li>
+                                                <a href="/paid-subscribe/">推荐机场</a>
+                                            </li>
+                                                                                        <li>
+                                                <a href="/news/">新闻资讯</a>
+                                            </li>
+                                                                                        <li>
+                                                <a href="/client.htm">客户端</a>
+                                            </li>
+                                                                                    </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="header__right">
+                            <div class="header__action d-flex align-items-center">
+                                <div class="header__hamburger ml-20 d-lg-none">
+                                    <div class="sidebar__toggle">
+                                        <button class="bar-icon">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Header area end -->
+
+<div id="popup-search-box">
+    <div class="box-inner-wrap d-flex align-items-center">
+        <form id="form" action="#" method="get" role="search">
+            <input id="popup-search" type="text" name="s" placeholder="Type keywords here...">
+        </form>
+        <div class="search-close"><i class="fa-sharp fa-regular fa-xmark"></i></div>
+    </div>
+</div>
+<!-- Header area end -->
+
+<!-- Body main wrapper start -->
+<main>
+
+    <div class="breadcrumb__area breadcrumb-space overflow-hidden banner-home-bg ">
+        <div class="banner-home__middel-shape inner-top-shape"></div>
+        <div class="container">
+            <div class="banner-all-shape-wrapper">
+                <div class="banner-home__banner-shape-1 first-shape">
+                    <img class="upDown-top" src="/assets/website/img/clashxv2ray/banner-shape-1.svg" alt="img not found">
+                </div>
+                <div class="banner-home__banner-shape-2 second-shape">
+                    <img class="upDown-bottom" src="/assets/website/img/clashxv2ray/banner-shape-2.svg" alt="img not found">
+                </div>
+                <div class="right-shape">
+                    <img class="zooming" src="/assets/website/img/clashxv2ray/inner-right-shape.svg" alt="img not found">
+                </div>
+            </div>
+            <div class="row align-items-center justify-content-between">
+                <div class="col-12">
+                    <div class="breadcrumb__content text-center">
+                        <div class="breadcrumb__title-wrapper mb-15 mb-sm-10 mb-xs-5">
+                            <h1 class="breadcrumb__title color-white">关于信号量Semaphore的acquire与release的说明</h1>
+                        </div>
+                        <div class="breadcrumb__menu" data-wow-delay=".5s">
+                            <nav>
+                                <ul>
+                                    <li><span><a href="/">首页</a></span></li>
+                                    <li><span><a href="/news/">新闻资讯</a></span></li>
+                                    <li class="active"><span>正文</span></li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!--latest Choose Us start-->
+        <section class="latest-Choose-us__area section-space overflow-hidden latest-Choose-bg">
+            <div class="container p-relative z-index-1">
+                <div class="row">
+                    <div class="col-md-9">
+                                        <input type="hidden" id="share-website-info" data-name="Clash Node官网订阅站" data-url="https://clashnode.github.io">
+                  				  				  				<div id="content_views" class="htmledit_views"> <p><strong>Semaphore 是 synchronized 的加强版，作用是控制线程的并发数量。</strong></p> <p><strong>关于信号量Semaphore的acquire与release的说明</strong></p> <p><strong>1、Semaphore信号量作为一种流控手段，可以对特定资源的允许同时访问的操作数量进行控制，例如池化技术(连接池)中的并发数，有界阻塞容器的容量等。</strong></p> <p><strong>&nbsp;</strong></p> <p><strong>2、Semaphore中包含初始化时固定个数的许可，在进行操作的时候，需要先acquire获取到许可，才可以继续执行任务，如果获取失败，则进入阻塞；处理完成之后需要release释放许可。</strong></p> <p><strong>&nbsp;</strong></p> <p><strong>3、acquire与release之间的关系：在实现中不包含真正的许可对象，并且Semaphore也不会将许可与线程关联起来，因此在一个线程中获得的许可可以在另一个线程中释放。可以将acquire操作视为是消费一个许可，而release操作是创建一个许可，Semaphore并不受限于它在创建时的初始许可数量。也就是说acquire与release并没有强制的一对一关系，release一次就相当于新增一个许可，许可的数量可能会由于没有与acquire操作一对一而导致超出初始化时设置的许可个数。</strong></p> </p></div> 			                <div class="clearfix"></div>
+                <div class="col-md-12 mt-5">
+                                        <p>上一个：<a href="/news/article-84438.htm">哪些属相的人不宜养狗（什么属像不能养狗）</a></p>
+                                        <p>下一个：<a href="/news/article-85149.htm">1970年农历四月二十二出生的人是什么命（1970年农历四月二十是几月几号）</a></p>
+                                    </div>
+                                    </div>
+                    <div class="col-md-3">
+                        <div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">热门文章</h3>
+    </div>
+    <div class="panel-body">
+        <ul class="p-0 x-0" style="list-style: none;margin: 0;padding: 0;">
+                        <li class="py-2"><a href="/news/article-78167.htm" title="PHP重载">PHP重载</a></li>
+                        <li class="py-2"><a href="/free-nodes/2025-3-5-node-share-links.htm" title="免费翻墙 | 3月5日19.2M/S|免费SSR/Clash/Shadowrocket/V2ray免费节点地址">免费翻墙 | 3月5日19.2M/S|免费SSR/Clash/Shadowrocket/V2ray免费节点地址</a></li>
+                        <li class="py-2"><a href="/news/article-78823.htm" title="生产动物疫苗的上市公司有哪些 生产动物疫苗的上市公司有哪些股票">生产动物疫苗的上市公司有哪些 生产动物疫苗的上市公司有哪些股票</a></li>
+                        <li class="py-2"><a href="/news/article-81594.htm" title="tf.reshape(tensor, shape, name=None)改变tensor的形状">tf.reshape(tensor, shape, name=None)改变tensor的形状</a></li>
+                        <li class="py-2"><a href="/free-nodes/2025-4-1-node-share.htm" title="免费翻墙 | 4月1日21.6M/S|免费Shadowrocket/Clash/V2ray/SSR免费节点地址">免费翻墙 | 4月1日21.6M/S|免费Shadowrocket/Clash/V2ray/SSR免费节点地址</a></li>
+                        <li class="py-2"><a href="/news/article-67544.htm" title="类和对象的学习心得">类和对象的学习心得</a></li>
+                        <li class="py-2"><a href="/free-nodes/2025-3-21-free-v2ray.htm" title="免费翻墙 | 3月21日19.9M/S|免费Shadowrocket/V2ray/Clash/SSR免费节点地址">免费翻墙 | 3月21日19.9M/S|免费Shadowrocket/V2ray/Clash/SSR免费节点地址</a></li>
+                        <li class="py-2"><a href="/free-nodes/2025-3-13-node-share-links.htm" title="免费翻墙 | 3月13日21.1M/S|免费V2ray/SSR/Shadowrocket/Clash免费节点地址">免费翻墙 | 3月13日21.1M/S|免费V2ray/SSR/Shadowrocket/Clash免费节点地址</a></li>
+                        <li class="py-2"><a href="/free-nodes/2025-3-23-node-share.htm" title="免费翻墙 | 3月23日22.6M/S|免费Clash/V2ray/SSR/Shadowrocket免费节点地址">免费翻墙 | 3月23日22.6M/S|免费Clash/V2ray/SSR/Shadowrocket免费节点地址</a></li>
+                        <li class="py-2"><a href="/free-nodes/2025-3-19-free-v2ray-subscribe.htm" title="免费翻墙 | 3月19日19.9M/S|免费SSR/Clash/V2ray/Shadowrocket免费节点地址">免费翻墙 | 3月19日19.9M/S|免费SSR/Clash/V2ray/Shadowrocket免费节点地址</a></li>
+                    </ul>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">归纳</h3>
+    </div>
+    <div class="panel-body">
+        <ul class="p-0 x-0" style="list-style: none;margin: 0;padding: 0;">
+                        <li class="py-2">
+                <h4><span class="badge" style="float: right;">6</span> <a href="/date/2025-04/" title="2025-04 归档">2025-04</a></h4>
+            </li>
+                        <li class="py-2">
+                <h4><span class="badge" style="float: right;">87</span> <a href="/date/2025-03/" title="2025-03 归档">2025-03</a></h4>
+            </li>
+                    </ul>
+    </div>
+</div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!--latest Choose Us end-->
+        
+        
+    </main>
+        <!-- Footer area start -->
+    <footer>
+        <section class="footer__area-common background overflow-hidden position-relative z-1">
+            <div class="footer__bottom-wrapper footer__bottom-home-1-bg">
+                <div class="container">
+                    <div class="footer__bottom">
+                        <div class="footer__copyright">
+                            <p>
+                                <a href="/">首页</a> | 
+                                <a href="/free-node/">免费节点</a> | 
+                                <a href="/news/">新闻资讯</a> |
+                                <a href="/about-us.htm">关于我们</a> |
+                                <a href="/disclaimer.htm">免责申明</a> |
+                                <a href="/privacy.htm">隐私申明</a> |
+                                <a href="/sitemap.xml">网站地图</a>
+                            </p>
+                            <p>
+                                <a href="/">免费翻墙 节点机场订阅官网</a> 版权所有 Powered by WordPress
+                            </p>
+                        </div>
+                        <div class="footer__copyright-menu">
+                            <ul>
+                                <li><a href="about-us.html">Privacy & Terms Condition</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </footer>
+    <!-- Footer area end -->
+    <!-- JS here -->
+    <script src="/assets/website/js/frontend/clashxv2ray/jquery-3.6.0.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/waypoints.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/bootstrap.bundle.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/meanmenu.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/swiper.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/wow.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/magnific-popup.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/type.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/counterup.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/nice-select.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/jquery-ui.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/parallax-scroll.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/jquery.countdown.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/isotope-docs.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/ajax-form.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/slick.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/main.js"></script>
+    <script src="https://www.freeclashnode.com/assets/js/frontend/invite-url.js"></script>
+    <script src="/assets/website/js/frontend/G.js"></script>
+</body>
+
+</html>
