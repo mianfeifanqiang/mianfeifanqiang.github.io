@@ -1,0 +1,337 @@
+<!doctype html>
+<html xml:lang="zh-CN" lang="zh-CN">
+
+<head>
+        <link rel="canonical" href="https://mianfeifanqiang.github.io/news/article-108641.htm" />
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Redis实现并发阻塞锁方案_在线工具</title>
+        <meta name="description" content="由于用户同时访问线上的下订单接口，导致在扣减库存时出现了异常，这是一个很典型的并发问题，本篇文章为解决并发问题而生，采用的技术为Redis锁机制+多线程的阻塞唤醒方法。 在实现Redis锁机制之前，我" />
+        <link rel="icon" href="/assets/website/img/clashxv2ray/favicon.ico" type="image/x-icon"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="author" content="免费翻墙 节点机场订阅官网">
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://mianfeifanqiang.github.io/news/article-108641.htm" />
+    <meta property="og:site_name" content="免费翻墙 节点机场订阅官网" />
+    <meta property="og:title" content="Redis实现并发阻塞锁方案_在线工具" />
+    <meta property="og:image" content="https://mianfeifanqiang.github.io/uploads/20250131/1d664023ae3fda8058b404dd7495b065.webp" />
+        <meta property="og:release_date" content="2025-05-01T09:02:35" />
+    <meta property="og:updated_time" content="2025-05-01T09:02:35" />
+        <meta property="og:description" content="由于用户同时访问线上的下订单接口，导致在扣减库存时出现了异常，这是一个很典型的并发问题，本篇文章为解决并发问题而生，采用的技术为Redis锁机制+多线程的阻塞唤醒方法。 在实现Redis锁机制之前，我" />
+    
+    <!-- Place favicon.ico in the root directory -->
+    <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+
+    <meta name="applicable-device" content="pc,mobile" />
+    <meta name="renderer" content="webkit" />
+    <meta name="force-rendering" content="webkit" />
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    <meta name="robots" content="max-image-preview:large" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Redis实现并发阻塞锁方案_在线工具">
+    <meta name="format-detection" content="telephone=no">
+
+    <link rel="dns-prefetch" href="https:/www.googletagmanager.com">
+    <link rel="dns-prefetch" href="https://www.googleadservices.com">
+    <link rel="dns-prefetch" href="https://www.google-analytics.com">
+    <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com">
+    <link rel="dns-prefetch" href="https://cm.g.doubleclick.net">
+
+    <link href="/assets/website/css/clashxv2ray/css2-Sofia_swap.css" rel="stylesheet">
+    <!-- CSS here -->
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/animate.min.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/swiper.min.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/magnific-popup.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/fontawesome-pro.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/spacing.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/custom-font.css">
+    <link rel="stylesheet" href="/assets/website/css/clashxv2ray/main.css">
+    <link rel="stylesheet" href="/assets/website/css/G.css" />
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KE0R1T7Z11"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KE0R1T7Z11');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3332997411212854"
+     crossorigin="anonymous"></script>
+</head>
+
+<body data-page="detail">
+
+    <!-- preloader start -->
+    <div id="preloader">
+        <div class="preloader-close">x</div>
+        <div class="sk-three-bounce">
+            <div class="sk-child sk-bounce1"></div>
+            <div class="sk-child sk-bounce2"></div>
+            <div class="sk-child sk-bounce3"></div>
+        </div>
+    </div>
+    <!-- preloader start -->
+    <!-- Backtotop start -->
+    <div class="backtotop-wrap cursor-pointer">
+        <svg class="backtotop-circle svg-content" width="100%" height="100%" viewbox="-1 -1 102 102">
+            <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"></path>
+        </svg>
+    </div>
+    <!-- Backtotop end -->
+    <!-- Offcanvas area start -->
+    <div class="fix">
+        <div class="offcanvas__area">
+            <div class="offcanvas__wrapper">
+                <div class="offcanvas__content">
+                    <div class="offcanvas__top d-flex justify-content-between align-items-center">
+                        <div class="offcanvas__logo">
+                            <a href="/" class="xcblog-blog-logo">
+                                <span>免费翻墙</span>
+                            </a>
+                        </div>
+                        <div class="offcanvas__close">
+                            <button class="offcanvas-close-icon animation--flip">
+                                <span class="offcanvas-m-lines">
+                                    <span class="offcanvas-m-line line--1"></span><span class="offcanvas-m-line line--2"></span><span class="offcanvas-m-line line--3"></span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mobile-menu fix"></div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="offcanvas__overlay"></div>
+    <div class="offcanvas__overlay-white"></div>
+    <!-- Offcanvas area start -->
+    <!-- Header area start -->
+    <header>
+        <div id="header-sticky" class="header__area header-1">
+            <div class="container">
+                <div class="mega__menu-wrapper p-relative">
+                    <div class="header__main">
+                        <div class="header__left">
+                            <div class="header__logo">
+                                <div class="logo">
+                                    <a href="/" class="xcblog-blog-logo">
+                                                                                <span>免费翻墙</span>
+                                                                            </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="header__middle">
+                            <div class="mean__menu-wrapper d-none d-lg-block">
+                                <div class="main-menu">
+                                    <nav id="mobile-menu">
+                                        <ul>
+                                                                                        <li>
+                                                <a href="/">首页</a>
+                                            </li>
+                                                                                        <li>
+                                                <a href="/free-nodes/">免费节点</a>
+                                            </li>
+                                                                                        <li>
+                                                <a href="/paid-subscribe/">推荐机场</a>
+                                            </li>
+                                                                                        <li>
+                                                <a href="/news/">新闻资讯</a>
+                                            </li>
+                                                                                        <li>
+                                                <a href="/client.htm">客户端</a>
+                                            </li>
+                                                                                    </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="header__right">
+                            <div class="header__action d-flex align-items-center">
+                                <div class="header__hamburger ml-20 d-lg-none">
+                                    <div class="sidebar__toggle">
+                                        <button class="bar-icon">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Header area end -->
+
+<div id="popup-search-box">
+    <div class="box-inner-wrap d-flex align-items-center">
+        <form id="form" action="#" method="get" role="search">
+            <input id="popup-search" type="text" name="s" placeholder="Type keywords here...">
+        </form>
+        <div class="search-close"><i class="fa-sharp fa-regular fa-xmark"></i></div>
+    </div>
+</div>
+<!-- Header area end -->
+
+<!-- Body main wrapper start -->
+<main>
+
+    <div class="breadcrumb__area breadcrumb-space overflow-hidden banner-home-bg ">
+        <div class="banner-home__middel-shape inner-top-shape"></div>
+        <div class="container">
+            <div class="banner-all-shape-wrapper">
+                <div class="banner-home__banner-shape-1 first-shape">
+                    <img class="upDown-top" src="/assets/website/img/clashxv2ray/banner-shape-1.svg" alt="img not found">
+                </div>
+                <div class="banner-home__banner-shape-2 second-shape">
+                    <img class="upDown-bottom" src="/assets/website/img/clashxv2ray/banner-shape-2.svg" alt="img not found">
+                </div>
+                <div class="right-shape">
+                    <img class="zooming" src="/assets/website/img/clashxv2ray/inner-right-shape.svg" alt="img not found">
+                </div>
+            </div>
+            <div class="row align-items-center justify-content-between">
+                <div class="col-12">
+                    <div class="breadcrumb__content text-center">
+                        <div class="breadcrumb__title-wrapper mb-15 mb-sm-10 mb-xs-5">
+                            <h1 class="breadcrumb__title color-white">Redis实现并发阻塞锁方案_在线工具</h1>
+                        </div>
+                        <div class="breadcrumb__menu" data-wow-delay=".5s">
+                            <nav>
+                                <ul>
+                                    <li><span><a href="/">首页</a></span></li>
+                                    <li><span><a href="/news/">新闻资讯</a></span></li>
+                                    <li class="active"><span>正文</span></li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!--latest Choose Us start-->
+        <section class="latest-Choose-us__area section-space overflow-hidden latest-Choose-bg">
+            <div class="container p-relative z-index-1">
+                <div class="row">
+                    <div class="col-md-9">
+                                        <input type="hidden" id="share-website-info" data-name="Clash Node官网订阅站" data-url="https://clashnode.github.io">
+                <div class="xcblog-blog-detail xcblog-blog-detail-defined">
+                      				  				  				<p>由于用户同时访问线上的下订单接口，导致在扣减库存时出现了异常，这是一个很典型的并发问题，本篇文章为解决并发问题而生，采用的技术为Redis锁机制+多线程的阻塞唤醒方法。</p> <p>在实现Redis锁机制之前，我们需要了解一下前置知识。</p> <h3 id="一前置知识">一、前置知识</h3> <h4 id="1多线程">1、多线程</h4> <p>将wait()、notifyAll()归为到多线程的方法中略有一些不恰当，这两个方法是Object中的方法。</p> <p>① 当调用了wait()方法后，让当前线程进入等待状态，并且让当前线程释放对象锁，等待既为阻塞状态，等待notifyAll()方法的唤醒。</p> <p>wait()方法和sleep()方法有一些相似之处，都是使当前线程阻塞，但他们实际是有一些区别的。</p> <ol> <li>执行wait() 方法之前需要请求锁，wait()方法执行的时候会释放锁，等待被唤醒的时候竞争锁。</li> <li>sleep()只是让当前线程休眠一段时间，无视锁的存在。</li> <li>wait() 是Object类的方法 sleep()是Thread的静态方法</li> </ol> <p>② notifyAll()方法为唤醒wait()中的线程。</p> <p>notifyAll() 和 notify() 方法都是可以唤醒调用了wait()方法，而陷入阻塞的线程。</p> <p>但是notify()是随机唤醒这个阻塞队列中随机的一个线程，而notifyAll()是唤醒所用的调用了wait()方法而陷入阻塞的线程，让他们自己去抢占对象锁。</p> <p>notifyAll() 和 notify() 也都是必须在加锁的同步代码块中被调用，它们起的是唤醒的作用，不是释放锁的作用，只用在当前同步代码块中的程序执行完，也就是对象锁自然释放了，notifyAll() 和 notify()方法才会起作用，去唤醒线程。</p> <p>wait()方法一般是和notify() 或者 notifyAll() 方法一起连用的。</p> <p>以上为掌握本篇博客必备的多线程知识，如果系统学习多线程的相关知识可查阅博客 程序员田同学</p> <h4 id="2redis">2、Redis</h4> <p>加锁的过程本质上就是往Redis中set值，当别的进程也来set值时候，发现里面已经有值了，就只能放弃获取稍后再试。</p> <p>Redis提供了一个天然实现锁机制的方法。</p> <pre><code>在Redis客户端的命令为 setnx(set if not exists)  </code></pre> <p>在集成Springboot中采用的方法为：</p> <pre><code>redisTemplate.opsForValue().setIfAbsent(key, value); </code></pre> <p>如果里面set值成功会返回True，如果里面已经存在值就会返回False。</p> <p>在我们实际使用的时候，setIfAbsent()方法并不是总是返回True和False。</p> <p>如果我们的业务中加了事务，该方法会返回null，不知道这是一个bug还是什么，这是Redis的一个巨坑，浪费了很长时间才发现了这个问题，如果解决此问题可以跳转到第四章。</p> <h3 id="二实现原理">二、实现原理</h3> <p>分布式锁本质上要实现的目标就是在 Redis 里面占一个位置，当别的进程也要来占时，发现已经有人占在那里了，就只好放弃或者稍后再试。占位一般是使用 setnx(set if not exists) 指令，只允许被一个客户端占位。先来先占， 事办完了，再调用 del 指令释放茅坑。</p> <p>其中，发现Redis中已经有值了，当前线程是直接放弃还是稍后再试分别就代表着，非阻塞锁和阻塞锁。</p> <p>在我们的业务场景中肯定是要稍后再试（阻塞锁），如果是直接放弃（非阻塞锁）在数据库层面就可以直接做，就不需要我们在代码大费周章了。</p> <p>非阻塞锁只能保存数据的正确性，在高并发的情况下会抛出大量的异常，当一百个并发请求到来时，只有一个请求成功，其他均会抛出异常。</p> <p>Redis非阻塞锁和 MySQL的乐观锁，最终达到的效果是一样的，乐观锁是采用CAS的思想。</p> <p>乐观锁方法：表字段 加一个版本号，或者别的字段也可以！加版本号，可以知道控制顺序而已！在update 的时候可以where后面加上version= oldVersion。数据库，在任何并发的情况下，update 成功就是 1 失败就是 0 .可以根据返回的 1 ，0 做相应的处理！</p> <p>我们更推荐大家使用阻塞锁的方式。</p> <p>当获取不到锁时候，我们让当前线程使用wait()方法唤醒，当持有锁的线程使用完成后，调用notifyAll()唤醒所有等待的方法。</p> <h3 id="三具体实现">三、具体实现</h3> <p>以下代码为阻塞锁的实现方式。</p> <p>业务层：</p> <pre><code>    public String test() throws InterruptedException {          lock("lockKey");         System.out.println("11");         System.out.println("22");         System.out.println(Thread.currentThread().getName()+"***********");         Thread.sleep(2000);         System.out.println("33");         System.out.println("44");         System.out.println("55");         unlock("lockKey");         return "String";     } </code></pre> <p>锁的工具类:</p> <p>主要是加锁和解锁的两个方法。</p> <pre><code> //每一个redis的key对应一个阻塞对象     private static HashMap&lt;String, Object&gt; blockers = new HashMap&lt;&gt;();      //当前获得锁的线程     private static Thread curThread;      public static RedisTemplate redisTemplate = (RedisTemplate) SpringUtils.getBean("redisTemplate") ;      /**      * 加锁      * @param key      * @throws InterruptedException      */      public static void lock(String key) {         //循环判断是否能够创建key， 不能则直接wait释放CPU执行权          //放不进指说明锁正在被占用         System.out.println(key+"**");          while (!RedisUtil.setLock(key,"1",3)){              synchronized (key) {                  blockers.put(key, key);                 //wait释放CPU执行权                 try {                     key.wait();                 } catch (InterruptedException e) {                     e.printStackTrace();                 }             }         }         blockers.put(key, key);         //能够成功创建，获取锁成功记录当前获取锁线程         curThread = Thread.currentThread();     }      /**      * 解锁      * @param key      */     public static void unlock(String key) {         //判断是否为加锁的线程执行解锁， 不是则直接忽略         if( curThread == Thread.currentThread()) {             RedisUtil.delete(key);             //删除key之后需要notifyAll所有的应用， 所以这里采用发订阅消息给所有的应用           //  RedisUtil.publish("lock", key);              //notifllall其他线程             Object lock = blockers.get(key);             if(lock != null) {                 synchronized (lock) {                     lock.notifyAll();                 }             }          }     } </code></pre> <p>当我们在不加锁时候，使用接口测试工具测试时，12345并不能都是顺序执行的，会造成输出顺序不一致，如果是在我们的实际场景中，这是输入换成了数据库的select和update，数据出现错乱也是很正常的情况了。</p> <p>当我们加上锁以后，12345都是顺序输出，并发问题顺利解决了。</p> <h3 id="四附录">四、附录</h3> <p>1、Redis存在的bug</p> <p>本来lock()方法是直接调用 "Redis.setIfAbsent()" 方法，但是在使用时候一直报空指针异常，最终定位问题为Redis.setIfAbsent()方法存在问题。</p> <p>在我的实际业务中，下订单的方法使用了@Transflastion增加了事务，导致该方法返回null，我们手写一个实现setIfAbsent()的作用。</p> <pre><code> /**      * 只有key不存在时,才设置值, 返回true, 否则返回false      *      * @param key     key 不能为null      * @param value   value 不能为null      * @param timeout 过期时长, 单位为妙      * @return      */     public static Boolean setLock(String key,String value, long timeout) {          SessionCallback&lt;Boolean&gt; sessionCallback = new SessionCallback&lt;Boolean&gt;() {             List&lt;Object&gt; exec = null;             @Override             @SuppressWarnings("unchecked")             public Boolean execute(RedisOperations operations) throws DataAccessException {                 operations.multi();                  redisTemplate.opsForValue().setIfAbsent(key, value);                 redisTemplate.expire(key,timeout, TimeUnit.SECONDS);                  exec = operations.exec();                  if(exec.size() &gt; 0) {                     return (Boolean) exec.get(0);                 }                 return false;             }         };         return (Boolean) redisTemplate.execute(sessionCallback);     } </code></pre> <p>方便对比，以下贴上原本的setIfAbsent()方法。</p> <pre><code> /**    * 只有key不存在时,才设置值, 返回true, 否则返回false [警告：事务或者管道情况下会报错-可使用 setLock方法]    *    * @param key     key 不能为null    * @param value   value 不能为null    * @param timeout 过期时长, 单位为妙    * @return    */   @Deprecated   public static &lt;T&gt; Boolean setIfAbsent(String key, T value, long timeout) {       // redisTemplate.multi();       ValueOperations&lt;String, T&gt; valueOperations = redisTemplate.opsForValue();       Boolean aBoolean = valueOperations.setIfAbsent(key, value, timeout, TimeUnit.SECONDS);      // redisTemplate.exec();     return aBoolean;   } </code></pre> <h4 id="2mysql的锁机制">2、MySQL的锁机制</h4> <p>在并发场景下MySQL会报错，报错信息如下：</p> <pre><code>### Cause: com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException: Lock wait timeout exceeded; try restarting transaction ; SQL []; Lock wait timeout exceeded; try restarting transaction; nested exception is com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException: Lock wait timeout exceeded; try restarting transaction </code></pre> <p>问题出现的原因是，某一种表频繁被锁表，导致另外一个事务超时，出现问题的原因是MySQL的机制。</p> <p>MySQL更新时如果where字段存在索引会使用行锁，否则会使用表锁。</p> <p>我们使用navichat在where字段上加上索引，问题顺利的迎刃而解。</p> 			                </div>
+                <div class="clearfix"></div>
+                <div class="col-md-12 mt-5">
+                                        <p>上一个：<a href="/news/article-107817.htm">猫打疫苗一共要多少钱一次（猫打疫苗一共要多少钱一次呢）</a></p>
+                                        <p>下一个：<a href="/news/article-108642.htm">猫粮品牌汇总大全（猫粮品牌汇总大全图）</a></p>
+                                    </div>
+                                    </div>
+                    <div class="col-md-3">
+                        <div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">热门文章</h3>
+    </div>
+    <div class="panel-body">
+        <ul class="p-0 x-0" style="list-style: none;margin: 0;padding: 0;">
+                        <li class="py-2"><a href="/news/article-89475.htm" title="PHP从HTML转义详解">PHP从HTML转义详解</a></li>
+                        <li class="py-2"><a href="/news/article-86579.htm" title="成都宠物领养中心地址电话是多少（成都宠物领养中心地址电话是多少号码）">成都宠物领养中心地址电话是多少（成都宠物领养中心地址电话是多少号码）</a></li>
+                        <li class="py-2"><a href="/news/article-97681.htm" title="SpringMVC 执行流程">SpringMVC 执行流程</a></li>
+                        <li class="py-2"><a href="/news/article-99139.htm" title="猫粮生产流程（猫粮生产流程图解）">猫粮生产流程（猫粮生产流程图解）</a></li>
+                        <li class="py-2"><a href="/news/article-94206.htm" title="哈尔滨农大动物医院地址（哈尔滨东北农业大学动物医院地址）">哈尔滨农大动物医院地址（哈尔滨东北农业大学动物医院地址）</a></li>
+                        <li class="py-2"><a href="/free-nodes/2025-4-24-free-node-subscribe-links.htm" title="免费翻墙 | 4月24日18.1M/S|免费Shadowrocket/SSR/V2ray/Clash免费节点地址">免费翻墙 | 4月24日18.1M/S|免费Shadowrocket/SSR/V2ray/Clash免费节点地址</a></li>
+                        <li class="py-2"><a href="/news/article-88736.htm" title="南京宠物领养中心官网（南京宠物领养中心官网招聘）">南京宠物领养中心官网（南京宠物领养中心官网招聘）</a></li>
+                        <li class="py-2"><a href="/news/article-107049.htm" title="220伏饲料颗粒机价格（220v饲料颗粒机）">220伏饲料颗粒机价格（220v饲料颗粒机）</a></li>
+                        <li class="py-2"><a href="/news/article-105284.htm" title="益沣动物医院怎么样啊好吗（益沣新材料）">益沣动物医院怎么样啊好吗（益沣新材料）</a></li>
+                        <li class="py-2"><a href="/news/article-87295.htm" title="中国宠物粮食品牌排行榜 中国宠物粮食品牌排行榜前十名">中国宠物粮食品牌排行榜 中国宠物粮食品牌排行榜前十名</a></li>
+                    </ul>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">归纳</h3>
+    </div>
+    <div class="panel-body">
+        <ul class="p-0 x-0" style="list-style: none;margin: 0;padding: 0;">
+                        <li class="py-2">
+                <h4><span class="badge" style="float: right;">3</span> <a href="/date/2025-05/" title="2025-05 归档">2025-05</a></h4>
+            </li>
+                        <li class="py-2">
+                <h4><span class="badge" style="float: right;">87</span> <a href="/date/2025-04/" title="2025-04 归档">2025-04</a></h4>
+            </li>
+                    </ul>
+    </div>
+</div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!--latest Choose Us end-->
+        
+        
+    </main>
+        <!-- Footer area start -->
+    <footer>
+        <section class="footer__area-common background overflow-hidden position-relative z-1">
+            <div class="footer__bottom-wrapper footer__bottom-home-1-bg">
+                <div class="container">
+                    <div class="footer__bottom">
+                        <div class="footer__copyright">
+                                                <p>
+                                                <a href="/">首页</a> |
+                                                <a href="/free-nodes/">免费节点</a> |
+                                                <a href="/paid-subscribe/">推荐机场</a> |
+                                                <a href="/news/">新闻资讯</a> |
+                                                <a href="/client.htm">客户端</a> |
+                                                <a href="/about-us.htm">关于我们</a> |
+                        <a href="/disclaimer.htm">免责申明</a> |
+                        <a href="/privacy.htm">隐私申明</a> |
+                        <a href="/sitemap.xml">网站地图</a>
+                    </p>
+                            <p>
+                                <a href="/">免费翻墙 节点机场订阅官网</a> 版权所有 Powered by WordPress
+                            </p>
+                        </div>
+                        <div class="footer__copyright-menu">
+                            <ul>
+                                <li><a href="about-us.html">Privacy & Terms Condition</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </footer>
+    <!-- Footer area end -->
+    <!-- JS here -->
+    <script src="/assets/website/js/frontend/clashxv2ray/jquery-3.6.0.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/waypoints.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/bootstrap.bundle.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/meanmenu.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/swiper.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/wow.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/magnific-popup.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/type.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/counterup.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/nice-select.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/jquery-ui.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/parallax-scroll.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/jquery.countdown.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/isotope-docs.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/ajax-form.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/slick.min.js"></script>
+    <script src="/assets/website/js/frontend/clashxv2ray/main.js"></script>
+    <script src="https://www.freeclashnode.com/assets/js/frontend/invite-url.js"></script>
+    <script src="/assets/website/js/frontend/G.js"></script>
+</body>
+
+</html>
